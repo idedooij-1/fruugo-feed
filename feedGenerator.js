@@ -1,9 +1,12 @@
 'use strict';
 
+/**
+ * Strip HTML tags and decode basic HTML entities.
+ */
 function stripHtml(html) {
   if (!html) return '';
   return html
-    .replace(/<br\s*\/?>/ gi, '\n')
+    .replace(/<br\s*\/?>/gi, '\n')
     .replace(/<\/p>/gi, '\n')
     .replace(/<\/tr>/gi, '\n')
     .replace(/<\/td>/gi, ' ')
@@ -18,6 +21,9 @@ function stripHtml(html) {
     .trim();
 }
 
+/**
+ * Escape characters that are unsafe outside CDATA in XML.
+ */
 function escapeXml(str) {
   if (str === null || str === undefined) return '';
   return String(str)
@@ -30,10 +36,12 @@ function escapeXml(str) {
 
 function buildVariantXml(product, variant, options) {
   const { vatRate, currency, language, defaultCategory } = options;
+
   const variants = product.variants.edges.map((e) => e.node);
   const hasMultipleVariants = variants.length > 1;
   const images = product.images.edges.map((e) => e.node.url);
 
+  // IDs
   const productId = product.handle;
   const skuId = variant.sku
     ? variant.sku
@@ -41,15 +49,20 @@ function buildVariantXml(product, variant, options) {
     ? `${product.handle}-${variant.id.split('/').pop()}`
     : product.handle;
 
+  // GTIN / EAN
   const ean = variant.barcode || 'EXCEP';
+
+  // Stock
   const qty = variant.inventoryQuantity != null ? Math.max(0, variant.inventoryQuantity) : 0;
   const stockStatus = variant.availableForSale && qty > 0 ? 'INSTOCK' : 'OUTOFSTOCK';
 
+  // Price
   const price = parseFloat(variant.price);
   const compareAt = variant.compareAtPrice ? parseFloat(variant.compareAtPrice) : null;
   const normalPrice = compareAt && compareAt > price ? compareAt : price;
   const discountPrice = compareAt && compareAt > price ? price : null;
 
+  // Variant attributes
   let attrSize = '';
   let attrColor = '';
   if (hasMultipleVariants) {
